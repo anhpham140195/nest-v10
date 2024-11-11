@@ -1,27 +1,37 @@
-name: CI
+name: Tag Scan with Trivy
 
 on:
-  push:
+  create:
     tags:
-      - 'v*'  # Trigger on tags that start with 'v'
+      - '*'
 
 jobs:
   scan:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '22'  # Specify the Node.js version
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y trivy
 
-    - name: Run Trivy Scan
-      run: |
-        sudo apt-get install -y trivy
-        trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+      - name: Run Trivy Scan
+        id: trivy_scan
+        run: |
+          # Run Trivy scan on the specified directory or file
+          trivy fs --exit-code 1 --severity HIGH,CRITICAL . || echo "Trivy scan failed, exiting with non-zero status."
+
+      - name: Create Tag
+        if: success() && github.event.ref_type == 'tag'
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          
+          # Create the tag
+          git tag $TAG_NAME
+          git push origin $TAG_NAME

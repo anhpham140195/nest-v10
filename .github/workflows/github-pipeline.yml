@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '20'  # Specify the Node.js version
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run Trivy Scan
+      run: |
+        # Install Trivy
+        sudo apt-get install -y trivy
+        # Scan the project directory
+        trivy fs --exit-code 1 --severity HIGH,CRITICAL .
